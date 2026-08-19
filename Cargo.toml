@@ -1,0 +1,3 @@
+[workspace]
+members = ["lab1","taller1", "taller2"]
+resolver = "3"
