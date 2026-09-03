@@ -103,6 +103,10 @@ name = "lab1"
 version = "0.1.0"
 
 [[package]]
+name = "lab2"
+version = "0.1.0"
+
+[[package]]
 name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -189,6 +193,10 @@ version = "0.1.0"
 dependencies = [
  "rust_xlsxwriter",
 ]
+
+[[package]]
+name = "taller3"
+version = "0.1.0"
 
 [[package]]
 name = "thiserror"
