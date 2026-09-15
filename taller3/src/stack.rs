@@ -1,38 +1,31 @@
-pub struct Stack<T, const N: usize> {
-    pub stack: [Option<T>; N],
-    pub count: usize,
+pub struct Stack<T> {
+    elements: Vec<T>,
 }
 
-impl<T, const N: usize> Stack<T, N> {
+impl<T> Stack<T> {
     pub fn new() -> Self {
         Stack {
-            stack: std::array::from_fn(|_| None),
-            count: 0,
+            elements: Vec::new(),
         }
     }
 
-    pub fn push(&mut self, item: T) -> Result<(), &str> {
-        if self.count >= N {
-            return Err("Stack overflow");
-        }
-        self.stack[self.count] = Some(item);
-        self.count += 1;
-        Ok(())
+    pub fn push(&mut self, item: T) {
+        self.elements.push(item);
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        if self.count == 0 {
-            return None;
-        }
-        self.count -= 1;
-        self.stack[self.count].take()
+        self.elements.pop()
     }
 
     pub fn peek(&self) -> Option<&T> {
-        if self.count == 0 {
-            return None;
-        }
+        self.elements.last()
+    }
 
-        self.stack[self.count - 1].as_ref()
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.elements.len()
     }
 }
