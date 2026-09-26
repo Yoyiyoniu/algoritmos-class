@@ -1,87 +1,164 @@
-use std::fs;
+mod converter;
+mod stack;
 
-fn main() {
-    let ruta = "/home/yoyoz/dev/algoritmos-class/lab2/src/data.txt";
-    let contenido = fs::read_to_string(ruta).expect("No se pudo leer el archivo");
+use converter::convert_general;
+use eframe::egui;
 
-    let parr: Vec<&str> = contenido
-        .split('.')
-        .map(|p| p.trim())
-        .filter(|p| !p.is_empty())
-        .collect();
-
-    procesar_parrafos(&parr, 1);
+fn main() -> eframe::Result {
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size(WINDOW_SIZE),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "Conversion de numeros fraccionarios entre sistemas numericos",
+        options,
+        Box::new(|_cc| Ok(Box::new(ConvertApp::default()))),
+    )
 }
 
-fn procesar_parrafos(parrafos: &[&str], idx: usize) {
-    if parrafos.is_empty() {
-        return;
-    }
-
-    let lineas: Vec<&str> = parrafos[0].lines().collect();
-
-    if idx & 1 == 0 {
-        procesar_par(&lineas, 0);
-    } else {
-        procesar_impar(&lineas, lineas.len());
-    }
-
-    print!("\n");
-    procesar_parrafos(&parrafos[1..], idx + 1);
+struct ConvertApp {
+    numero: String,
+    base_orig: u32,
+    base_dest: u32,
+    precision: u32,
+    resultado: String,
+    error: String,
 }
 
-fn procesar_impar(lineas: &[&str], i: usize) {
-    if i == 0 {
-        return;
-    }
-    let palabras: Vec<&str> = lineas[i - 1].split_whitespace().collect();
-    println!("{}.", invertir_orden_palabras(&palabras));
-    procesar_impar(lineas, i - 1);
-}
+const BASES: [(u32, &str); 4] = [
+    (10, "Decimal (10)"),
+    (2, "Binario (2)"),
+    (8, "Octal (8)"),
+    (16, "Hexadecimal (16)"),
+];
 
-fn procesar_par(lineas: &[&str], i: usize) {
-    if i >= lineas.len() {
-        return;
-    }
-    let palabras: Vec<&str> = lineas[i].split_whitespace().collect();
-    println!("{}.", invertir_letras_palabras(&palabras, 0));
-    procesar_par(lineas, i + 1);
-}
+const WINDOW_SIZE: [f32; 2] = [900.0, 420.0];
+const PRECISION_MIN: u32 = 1;
+const PRECISION_MAX: u32 = 16;
 
-fn invertir_orden_palabras(palabras: &[&str]) -> String {
-    if palabras.len() <= 1 {
-        return palabras.get(0).unwrap_or(&"").to_string();
-    }
-    let ultima = palabras[palabras.len() - 1];
-    let resto = invertir_orden_palabras(&palabras[..palabras.len() - 1]);
-    format!("{} {}", ultima, resto)
-}
-
-fn invertir_letras_palabras(palabras: &[&str], i: usize) -> String {
-    if i >= palabras.len() {
-        return String::new();
-    }
-    let invertida = invertir_letras(palabras[i]);
-    if i == palabras.len() - 1 {
-        invertida
-    } else {
-        format!(
-            "{} {}",
-            invertida,
-            invertir_letras_palabras(palabras, i + 1)
-        )
+fn base_name(base: u32) -> &'static str {
+    match base {
+        2 => "Binario (2)",
+        8 => "Octal (8)",
+        16 => "Hexadecimal (16)",
+        _ => "Decimal (10)",
     }
 }
 
-fn invertir_letras(palabra: &str) -> String {
-    invertir_chars(&palabra.chars().collect::<Vec<char>>())
+impl Default for ConvertApp {
+    fn default() -> Self {
+        Self {
+            numero: "6.1".to_owned(),
+            base_orig: 10,
+            base_dest: 2,
+            precision: 8,
+            resultado: String::new(),
+            error: String::new(),
+        }
+    }
 }
 
-fn invertir_chars(chars: &[char]) -> String {
-    if chars.is_empty() {
-        return String::new();
+impl ConvertApp {
+    fn set_error(&mut self, message: &str) {
+        self.resultado.clear();
+        self.error = message.to_owned();
     }
-    let mut resto = invertir_chars(&chars[1..]);
-    resto.push(chars[0]);
-    resto
+
+    fn calculate(&mut self) {
+        self.error.clear();
+        match convert_general(
+            &self.numero,
+            self.base_orig,
+            self.base_dest,
+            self.precision as usize,
+        ) {
+            Ok(out) => self.resultado = out,
+            Err(e) => self.set_error(&e),
+        }
+    }
+
+    fn show_number_inputs(&mut self, ui: &mut egui::Ui) {
+        ui.columns(3, |cols| {
+            cols[0].vertical(|ui| {
+                ui.label("Numero original");
+                ui.text_edit_singleline(&mut self.numero);
+            });
+            cols[1].vertical(|ui| {
+                show_base_selector(
+                    ui,
+                    "Base original",
+                    "Base del sistema numerico original",
+                    "base_orig",
+                    &mut self.base_orig,
+                );
+            });
+            cols[2].vertical(|ui| {
+                show_base_selector(
+                    ui,
+                    "Base de resultados",
+                    "Base del sistema numerico resultante",
+                    "base_dest",
+                    &mut self.base_dest,
+                );
+            });
+        });
+    }
+
+    fn show_precision_and_action(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label("Digitos despues del punto decimal:");
+            ui.add(egui::Slider::new(&mut self.precision, PRECISION_MIN..=PRECISION_MAX).text(""));
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let btn = egui::Button::new(
+                    egui::RichText::new("CALCULAR")
+                        .color(egui::Color32::WHITE)
+                        .strong(),
+                )
+                .fill(egui::Color32::from_rgb(255, 109, 0));
+                if ui.add_sized([110.0, 32.0], btn).clicked() {
+                    self.calculate();
+                }
+            });
+        });
+    }
+
+    fn show_output(&self, ui: &mut egui::Ui) {
+        ui.label(egui::RichText::new("Numero resultante").small().weak());
+        if !self.resultado.is_empty() {
+            ui.label(egui::RichText::new(&self.resultado).monospace().size(20.0));
+        }
+        if !self.error.is_empty() {
+            ui.label(egui::RichText::new(&self.error).color(egui::Color32::RED));
+        }
+    }
+}
+
+impl eframe::App for ConvertApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Conversion de numeros fraccionarios entre sistemas numericos");
+            ui.add_space(12.0);
+
+            self.show_number_inputs(ui);
+            ui.add_space(12.0);
+            self.show_precision_and_action(ui);
+            ui.add_space(24.0);
+            self.show_output(ui);
+        });
+    }
+}
+
+/// ComboBox de base con las opciones de [`BASES`].
+/// El `id_salt` debe ser distinto por selector para no colisionar
+/// el estado interno de egui.
+fn show_base_selector(ui: &mut egui::Ui, label: &str, hint: &str, id_salt: &str, base: &mut u32) {
+    ui.label(label);
+    egui::ComboBox::from_id_salt(id_salt)
+        .selected_text(base_name(*base))
+        .show_ui(ui, |ui| {
+            for (value, option_label) in BASES {
+                ui.selectable_value(base, value, option_label);
+            }
+        });
+    ui.label(egui::RichText::new(hint).small().weak());
 }
