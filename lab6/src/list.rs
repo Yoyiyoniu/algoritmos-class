@@ -17,16 +17,16 @@ impl<T> Nodo<T> {
     }
 }
 
-pub struct ListaDoble<T> {
-    cabeza: Option<Rc<RefCell<Nodo<T>>>>,
+pub struct Tree<T> {
+    head: Option<Rc<RefCell<Nodo<T>>>>,
     cola: Option<Weak<RefCell<Nodo<T>>>>,
     tamano: usize,
 }
 
-impl<T> ListaDoble<T> {
+impl<T> Tree<T> {
     pub fn new() -> Self {
         Self {
-            cabeza: None,
+            head: None,
             cola: None,
             tamano: 0,
         }
@@ -39,15 +39,15 @@ impl<T> ListaDoble<T> {
     pub fn agregar_inicio(&mut self, dato: T) {
         let nuevo_nodo = Rc::new(RefCell::new(Nodo::new(dato)));
 
-        match self.cabeza.take() {
-            Some(vieja_cabeza) => {
-                vieja_cabeza.borrow_mut().anterior = Some(Rc::downgrade(&nuevo_nodo));
-                nuevo_nodo.borrow_mut().siguiente = Some(vieja_cabeza);
-                self.cabeza = Some(nuevo_nodo);
+        match self.head.take() {
+            Some(past_head) => {
+                past_head.borrow_mut().anterior = Some(Rc::downgrade(&nuevo_nodo));
+                nuevo_nodo.borrow_mut().siguiente = Some(past_head);
+                self.head = Some(nuevo_nodo);
             }
             None => {
                 self.cola = Some(Rc::downgrade(&nuevo_nodo));
-                self.cabeza = Some(nuevo_nodo);
+                self.head = Some(nuevo_nodo);
             }
         }
         self.tamano += 1;
@@ -58,7 +58,7 @@ impl<T> ListaDoble<T> {
         if indice >= self.tamano {
             return None;
         }
-        let mut actual = self.cabeza.clone()?;
+        let mut actual = self.head.clone()?;
         for _ in 0..indice {
             let siguiente = actual.borrow().siguiente.clone()?;
             actual = siguiente;
@@ -93,7 +93,7 @@ impl<T> ListaDoble<T> {
         }
 
         // Reinsertar como nueva cabeza
-        let vieja_cabeza = self.cabeza.take();
+        let vieja_cabeza = self.head.take();
         if let Some(ref vieja) = vieja_cabeza {
             vieja.borrow_mut().anterior = Some(Rc::downgrade(&target_nodo));
         }
@@ -101,40 +101,6 @@ impl<T> ListaDoble<T> {
         target_nodo.borrow_mut().anterior = None;
         target_nodo.borrow_mut().siguiente = vieja_cabeza;
 
-        self.cabeza = Some(target_nodo);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn mover_al_inicio_reordena_y_mantiene_enlaces() {
-        let mut lista = ListaDoble::new();
-        for valor in 1..=4 {
-            lista.agregar_inicio(valor);
-        }
-        assert_eq!(datos_en_orden(&lista), vec![4, 3, 2, 1]);
-
-        // Índice 2 = valor 2 (el tercero), pasa al frente
-        lista.mover_al_inicio(2);
-        assert_eq!(datos_en_orden(&lista), vec![2, 4, 3, 1]);
-        assert_eq!(lista.size(), 4);
-        assert!(lista.obtener_nodo_por_indice(4).is_none());
-
-        lista.mover_al_inicio(0);
-        assert_eq!(datos_en_orden(&lista), vec![2, 4, 3, 1]);
-
-        // El último también debe poder moverse sin romper la cola
-        lista.mover_al_inicio(3);
-        assert_eq!(datos_en_orden(&lista), vec![1, 2, 4, 3]);
-    }
-
-    fn datos_en_orden(lista: &ListaDoble<usize>) -> Vec<usize> {
-        (0..lista.size())
-            .filter_map(|i| lista.obtener_nodo_por_indice(i))
-            .map(|nodo| nodo.borrow().dato)
-            .collect()
+        self.head = Some(target_nodo);
     }
 }

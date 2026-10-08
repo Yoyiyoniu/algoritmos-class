@@ -1,4 +1,4 @@
-use crate::list::ListaDoble;
+use crate::list::Tree;
 use chrono::{Datelike, Local, NaiveDate, NaiveTime};
 
 const MESES: [&str; 12] = [
@@ -85,14 +85,12 @@ impl Correo {
 }
 
 pub struct CorreoManager {
-    pub lista: ListaDoble<Correo>,
+    pub lista: Tree<Correo>,
 }
 
 impl CorreoManager {
     pub fn new() -> Self {
-        let mut manager = Self {
-            lista: ListaDoble::new(),
-        };
+        let mut manager = Self { lista: Tree::new() };
         manager.inicializar_15_correos();
         manager
     }
