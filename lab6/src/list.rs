@@ -32,7 +32,7 @@ impl<T> ListaDoble<T> {
         }
     }
 
-    pub fn tamano(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.tamano
     }
 
@@ -102,5 +102,39 @@ impl<T> ListaDoble<T> {
         target_nodo.borrow_mut().siguiente = vieja_cabeza;
 
         self.cabeza = Some(target_nodo);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mover_al_inicio_reordena_y_mantiene_enlaces() {
+        let mut lista = ListaDoble::new();
+        for valor in 1..=4 {
+            lista.agregar_inicio(valor);
+        }
+        assert_eq!(datos_en_orden(&lista), vec![4, 3, 2, 1]);
+
+        // Índice 2 = valor 2 (el tercero), pasa al frente
+        lista.mover_al_inicio(2);
+        assert_eq!(datos_en_orden(&lista), vec![2, 4, 3, 1]);
+        assert_eq!(lista.size(), 4);
+        assert!(lista.obtener_nodo_por_indice(4).is_none());
+
+        lista.mover_al_inicio(0);
+        assert_eq!(datos_en_orden(&lista), vec![2, 4, 3, 1]);
+
+        // El último también debe poder moverse sin romper la cola
+        lista.mover_al_inicio(3);
+        assert_eq!(datos_en_orden(&lista), vec![1, 2, 4, 3]);
+    }
+
+    fn datos_en_orden(lista: &ListaDoble<usize>) -> Vec<usize> {
+        (0..lista.size())
+            .filter_map(|i| lista.obtener_nodo_por_indice(i))
+            .map(|nodo| nodo.borrow().dato)
+            .collect()
     }
 }

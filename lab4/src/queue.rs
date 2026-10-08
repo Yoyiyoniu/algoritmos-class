@@ -31,7 +31,7 @@ pub struct Queue {
 }
 
 impl Queue {
-    pub fn nueva() -> Self {
+    pub fn new() -> Self {
         Self {
             slots: Default::default(),
             cabeza: 0,

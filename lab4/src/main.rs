@@ -14,7 +14,7 @@ struct Plant {
 
 fn main() {
     let mut plant = Plant {
-        lines: [Queue::nueva(), Queue::nueva(), Queue::nueva()],
+        lines: [Queue::new(), Queue::new(), Queue::new()],
         entries: [0; NUM_LINES],
         next_id: 100,
     };

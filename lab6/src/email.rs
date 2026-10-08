@@ -1,6 +1,13 @@
 use crate::list::ListaDoble;
 use chrono::{Datelike, Local, NaiveDate, NaiveTime};
 
+const MESES: [&str; 12] = [
+    "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic",
+];
+const HORA_BASE: u32 = 8;
+const MINUTO_BASE: u32 = 15;
+const DIAS_ATRAS: i64 = 15;
+
 #[derive(Clone, Debug)]
 pub struct Correo {
     pub remitente_original: String,
@@ -56,11 +63,12 @@ impl Correo {
         let fecha_str = if self.fecha == hoy {
             self.hora.format("%H:%M").to_string()
         } else {
-            let meses = [
-                "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic",
-            ];
             let mes_idx = (self.fecha.month() as usize).saturating_sub(1);
-            format!("{} {}", self.fecha.day(), meses.get(mes_idx).unwrap_or(&""))
+            format!(
+                "{} {}",
+                self.fecha.day(),
+                MESES.get(mes_idx).copied().unwrap_or_default()
+            )
         };
 
         let contador_str = if self.contador > 1 {
@@ -111,10 +119,13 @@ impl CorreoManager {
         let hoy = Local::now().date_naive();
 
         for (i, remitente) in remitentes.iter().enumerate() {
-            let dias_atras = (15 - i) as i64;
-            let fecha = hoy - chrono::Duration::days(dias_atras);
-            let hora = NaiveTime::from_hms_opt(8 + (i % 10) as u32, (15 + i * 2) as u32 % 60, 0)
-                .unwrap_or_default();
+            let fecha = hoy - chrono::Duration::days(DIAS_ATRAS - i as i64);
+            let hora = NaiveTime::from_hms_opt(
+                HORA_BASE + (i % 10) as u32,
+                (MINUTO_BASE + i as u32 * 2) % 60,
+                0,
+            )
+            .unwrap_or_default();
 
             let correo = Correo::new(
                 remitente,
