@@ -8,6 +8,7 @@ use email::{Correo, CorreoManager};
 const WINDOW_SIZE: [f32; 2] = [960.0, 640.0];
 const VIEWS: [&str; 2] = ["Bandeja de Entrada", "Recibir Correo"];
 
+const INBOX_PAGE_SIZE: usize = 10;
 const THREAD_MAX_HEIGHT: f32 = 180.0;
 const EXIT_BUTTON_SIZE: [f32; 2] = [90.0, 30.0];
 const SUBMIT_BUTTON_SIZE: [f32; 2] = [160.0, 32.0];
@@ -31,7 +32,8 @@ struct CorreoApp {
     manager: CorreoManager,
     view: usize,
 
-    seleccion: Option<usize>,
+    indice_inicio: usize,
+    seleccion_relativa: Option<usize>,
 
     nuevo_remitente: String,
     nuevo_asunto: String,
@@ -50,7 +52,8 @@ impl Default for CorreoApp {
         Self {
             manager: CorreoManager::new(),
             view: 0,
-            seleccion: Some(0),
+            indice_inicio: 0,
+            seleccion_relativa: Some(0),
             nuevo_remitente: String::new(),
             nuevo_asunto: String::new(),
             nuevo_cuerpo: String::new(),
@@ -101,34 +104,47 @@ impl CorreoApp {
         ui.add_space(SPACE_SM);
 
         let total = self.manager.lista.size();
-        ui.label(format!("Total de correos: {}", total));
+        let fin = (self.indice_inicio + INBOX_PAGE_SIZE).min(total);
+
+        ui.horizontal(|ui| {
+            if ui.button("Anterior (Más reciente)").clicked() && self.indice_inicio > 0 {
+                self.indice_inicio -= 1;
+            }
+            ui.label(format!(
+                "Mostrando correos {} al {} (Total: {})",
+                self.indice_inicio + 1,
+                fin,
+                total
+            ));
+            if ui.button("Siguiente (Más antiguo)").clicked()
+                && self.indice_inicio + INBOX_PAGE_SIZE < total
+            {
+                self.indice_inicio += 1;
+            }
+        });
+
         ui.add_space(SPACE_MD);
 
         // Vista dividida: Lista a la izquierda | Detalle a la derecha
         ui.columns(2, |cols| {
-            // Columna Izquierda: todos los correos, con scroll
+            // Columna Izquierda: ventana de 10 correos visibles
             cols[0].vertical(|ui| {
                 ui.label(egui::RichText::new("Seleccione un correo:").strong());
                 ui.separator();
 
-                egui::ScrollArea::vertical()
-                    .id_salt("lista_correos")
-                    .auto_shrink([false, false])
-                    .max_height(f32::INFINITY)
-                    .show(ui, |ui| {
-                        for i in 0..total {
-                            let Some(nodo) = self.manager.lista.obtener_nodo_por_indice(i) else {
-                                continue;
-                            };
-                            let correo = nodo.borrow().dato.clone();
-                            let label = format!("[{}] {}", i + 1, correo.encabezado_lista());
+                for i in self.indice_inicio..fin {
+                    let Some(nodo) = self.manager.lista.obtener_nodo_por_indice(i) else {
+                        continue;
+                    };
+                    let correo = nodo.borrow().dato.clone();
+                    let rel_idx = i - self.indice_inicio;
+                    let label = format!("[{}] {}", i + 1, correo.encabezado_lista());
 
-                            let is_selected = self.seleccion == Some(i);
-                            if ui.selectable_label(is_selected, label).clicked() {
-                                self.seleccion = Some(i);
-                            }
-                        }
-                    });
+                    let is_selected = self.seleccion_relativa == Some(rel_idx);
+                    if ui.selectable_label(is_selected, label).clicked() {
+                        self.seleccion_relativa = Some(rel_idx);
+                    }
+                }
             });
 
             // Columna Derecha: Hilo de conversación y acciones de respuesta
@@ -136,7 +152,8 @@ impl CorreoApp {
                 ui.label(egui::RichText::new("Hilo de Conversación:").strong());
                 ui.separator();
 
-                if let Some(abs_idx) = self.seleccion {
+                if let Some(rel_idx) = self.seleccion_relativa {
+                    let abs_idx = self.indice_inicio + rel_idx;
                     let Some(nodo) = self.manager.lista.obtener_nodo_por_indice(abs_idx) else {
                         ui.label("Ningún correo seleccionado.");
                         return;
@@ -186,7 +203,8 @@ impl CorreoApp {
                             .dato
                             .responder_por_remitente(respuesta.trim());
                         self.manager.lista.mover_al_inicio(abs_idx);
-                        self.seleccion = Some(0);
+                        self.indice_inicio = 0;
+                        self.seleccion_relativa = Some(0);
                         self.set_result(
                             "Respuesta recibida. El correo se movió al INICIO de la lista.",
                         );
@@ -239,7 +257,8 @@ impl CorreoApp {
                 self.nuevo_remitente.clear();
                 self.nuevo_asunto.clear();
                 self.nuevo_cuerpo.clear();
-                self.seleccion = Some(0);
+                self.indice_inicio = 0;
+                self.seleccion_relativa = Some(0);
                 self.view = 0;
                 self.set_result("Correo recibido e insertado al inicio de la lista.");
             }

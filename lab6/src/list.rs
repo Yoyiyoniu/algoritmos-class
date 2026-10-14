@@ -104,3 +104,35 @@ impl<T> Tree<T> {
         self.head = Some(target_nodo);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mover_al_inicio_reordena_sin_romper_enlaces() {
+        let mut lista = Tree::new();
+        for valor in 1..=4 {
+            lista.agregar_inicio(valor);
+        }
+        assert_eq!(datos_en_orden(&lista), vec![4, 3, 2, 1]);
+
+        lista.mover_al_inicio(2);
+        assert_eq!(datos_en_orden(&lista), vec![2, 4, 3, 1]);
+        assert_eq!(lista.size(), 4);
+        assert!(lista.obtener_nodo_por_indice(4).is_none());
+
+        lista.mover_al_inicio(0);
+        assert_eq!(datos_en_orden(&lista), vec![2, 4, 3, 1]);
+
+        lista.mover_al_inicio(3);
+        assert_eq!(datos_en_orden(&lista), vec![1, 2, 4, 3]);
+    }
+
+    fn datos_en_orden(lista: &Tree<usize>) -> Vec<usize> {
+        (0..lista.size())
+            .filter_map(|i| lista.obtener_nodo_por_indice(i))
+            .map(|nodo| nodo.borrow().dato)
+            .collect()
+    }
+}
