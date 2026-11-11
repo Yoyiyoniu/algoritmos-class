@@ -1774,6 +1774,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "lab7"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+]
+
+[[package]]
+name = "lab8"
+version = "0.1.0"
+
+[[package]]
+name = "lab9"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3012,6 +3032,22 @@ dependencies = [
 [[package]]
 name = "taller5"
 version = "0.1.0"
+
+[[package]]
+name = "taller7-1"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+]
+
+[[package]]
+name = "taller7-2"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+]
 
 [[package]]
 name = "tempfile"
